@@ -6,9 +6,6 @@ variables:
   releaseBranchName: 'release'
 
 stages:
-# ==============================
-#  BUILD STAGE
-# ==============================
 - stage: 'Build'
   displayName: 'Build the web application'
   jobs: 
@@ -17,56 +14,40 @@ stages:
     pool:
       name: hugotest1
       vmImage: 'ubuntu-22.04'
+      demands:
+      - npm
 
     variables:
       wwwrootDir: 'Tailspin.SpaceGame.Web/wwwroot'
       dotnetSdkVersion: '8.x'
 
     steps:
-    # Install .NET SDK
     - task: UseDotNet@2
       displayName: 'Use .NET SDK $(dotnetSdkVersion)'
       inputs:
         version: '$(dotnetSdkVersion)'
 
-    # ✅ Install Node.js before npm tasks
-    - task: NodeTool@0
-      displayName: 'Use Node.js 18.x'
-      inputs:
-        versionSpec: '18.x'
-
-    # ✅ Run npm install in the correct folder
     - task: Npm@1
       displayName: 'Run npm install'
       inputs:
-        command: 'install'
-        workingDir: 'Tailspin.SpaceGame.Web'
         verbose: false
 
-    # Compile Sass assets
     - script: './node_modules/.bin/node-sass $(wwwrootDir) --output $(wwwrootDir)'
-      workingDirectory: 'Tailspin.SpaceGame.Web'
       displayName: 'Compile Sass assets'
 
-    # Run gulp tasks
-    - task: Gulp@1
+    - task: gulp@1
       displayName: 'Run gulp tasks'
-      inputs:
-        gulpFile: 'Tailspin.SpaceGame.Web/gulpfile.js'
 
-    # Write build info
     - script: 'echo "$(Build.DefinitionName), $(Build.BuildId), $(Build.BuildNumber)" > buildinfo.txt'
       displayName: 'Write build info'
       workingDirectory: $(wwwrootDir)
 
-    # Restore .NET dependencies
     - task: DotNetCoreCLI@2
       displayName: 'Restore project dependencies'
       inputs:
         command: 'restore'
         projects: '**/*.csproj'
 
-    # Build project
     - task: DotNetCoreCLI@2
       displayName: 'Build the project - $(buildConfiguration)'
       inputs:
@@ -74,7 +55,6 @@ stages:
         arguments: '--no-restore --configuration $(buildConfiguration)'
         projects: '**/*.csproj'
 
-    # Publish output to artifact staging directory
     - task: DotNetCoreCLI@2
       displayName: 'Publish the project - $(buildConfiguration)'
       inputs:
@@ -84,37 +64,54 @@ stages:
         arguments: '--no-build --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/$(buildConfiguration)'
         zipAfterPublish: true
 
-    # Publish artifact for next stage
     - publish: '$(Build.ArtifactStagingDirectory)'
       artifact: drop
 
-# ==============================
-# 🚀 DEV DEPLOYMENT STAGE
-# ==============================
 - stage: 'Dev'
   displayName: 'Deploy to the dev environment'
   dependsOn: Build
-  condition: succeeded()
+  condition:  succeeded()
   jobs:
   - deployment: Deploy
-    displayName: 'Deploy to Dev Web App'
     pool:
       vmImage: 'ubuntu-22.04'
-    environment: 'dev'
+    environment: dev
     variables:
-    - group: 'Release'  # <-- ensure your variable group is created in Azure DevOps
+    - group: Release
     strategy:
       runOnce:
         deploy:
           steps:
           - download: current
             artifact: drop
-
-          # ✅ Deploy to Azure App Service
           - task: AzureWebApp@1
-            displayName: 'Deploy to Dev Web App'
+            displayName: 'Azure App Service Deploy: dev website'
             inputs:
-              azureSubscription: '<YOUR-SERVICE-CONNECTION-NAME>'   # <-- replace with your real Service Connection name
+              azureSubscription: 'azure-sp-connection'
               appType: 'webAppLinux'
-              appName: 'tailspin-space-game-web-dev-254053414'      # <-- replace with your actual web app name
+              appName: '$(WebAppNameDev)'
+              package: '$(Pipeline.Workspace)/drop/$(buildConfiguration)/*.zip'
+
+- stage: 'Staging'
+  displayName: 'Deploy to the staging environment'
+  dependsOn: Dev
+  jobs:
+  - deployment: Deploy
+    pool:
+      vmImage: 'ubuntu-22.04'
+    environment: staging
+    variables:
+    - group: 'Release'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+          - task: AzureWebApp@1
+            displayName: 'Azure App Service Deploy: staging website'
+            inputs:
+              azureSubscription: 'your-subscription'
+              appType: 'webAppLinux'
+              appName: '$(WebAppNameStaging)'
               package: '$(Pipeline.Workspace)/drop/$(buildConfiguration)/*.zip'

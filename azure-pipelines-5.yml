@@ -15,7 +15,7 @@ stages:
   - job: 'Build'
     displayName: 'Build job'
     pool:
-      name: hugotest1        # Self-hosted Windows agent
+      name: hugotest1        # ✅ Self-hosted Windows agent
       demands:
       - npm
 
@@ -98,7 +98,7 @@ stages:
   jobs:
   - job: 'WaitForApproval'
     displayName: 'Wait for Manual Approval'
-    pool: server    # Server job (no agent needed)
+    pool: server    # ✅ No agent needed
     steps:
     - task: ManualValidation@0
       inputs:
@@ -122,10 +122,10 @@ stages:
   - deployment: Deploy
     pool:
       name: hugotest1
-      vmImage: 'ubuntu-22.04'   # Microsoft-hosted agent
+      vmImage: 'ubuntu-22.04'   # ✅ Microsoft-hosted Linux agent
     environment: dev
     variables:
-    - group: Release
+      WebAppNameDev: 'tailspin-space-game-web-dev-254053414'   # ✅ Real dev web app
     strategy:
       runOnce:
         deploy:
@@ -152,10 +152,10 @@ stages:
   - deployment: Deploy
     pool:
       name: hugotest1
-      vmImage: 'ubuntu-22.04'   # Microsoft-hosted agent
+      vmImage: 'ubuntu-22.04'   # ✅ Microsoft-hosted Linux agent
     environment: staging
     variables:
-    - group: Release
+      WebAppNameStaging: 'tailspin-space-game-web-staging-125860839'  # ✅ Real staging web app
     strategy:
       runOnce:
         deploy:

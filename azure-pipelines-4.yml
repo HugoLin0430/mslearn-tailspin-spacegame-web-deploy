@@ -27,9 +27,18 @@ stages:
       inputs:
         version: '$(dotnetSdkVersion)'
 
+    # ✅ Add this: Node.js tool installer (use Node 18 or 20)
+    - task: NodeTool@0
+      displayName: 'Use Node.js 18.x'
+      inputs:
+        versionSpec: '18.x'
+
+    # ✅ Add working directory to npm task
     - task: Npm@1
       displayName: 'Run npm install'
       inputs:
+        workingDir: 'Tailspin.SpaceGame.Web'   # <--- adjust if your package.json is inside this folder
+        command: 'install'
         verbose: false
 
     - script: './node_modules/.bin/node-sass $(wwwrootDir) --output $(wwwrootDir)'

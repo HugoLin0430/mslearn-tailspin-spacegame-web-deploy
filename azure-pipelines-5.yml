@@ -7,7 +7,7 @@ variables:
 
 stages:
 # =====================================================
-# BUILD STAGE
+# BUILD STAGE  
 # =====================================================
 - stage: 'Build'
   displayName: 'Build the web application'
@@ -15,7 +15,7 @@ stages:
   - job: 'Build'
     displayName: 'Build job'
     pool:
-      name: hugotest1        # ✅ Self-hosted Windows agent
+      name: hugotest1        
       demands:
       - npm
 
@@ -89,43 +89,21 @@ stages:
 
 
 # =====================================================
-# MANUAL APPROVAL BEFORE DEPLOYMENT
-# =====================================================
-- stage: 'Approval'
-  displayName: 'Manual Approval Step'
-  dependsOn: Build
-  condition: succeeded()
-  jobs:
-  - job: 'WaitForApproval'
-    displayName: 'Wait for Manual Approval'
-    pool: server    # ✅ No agent needed
-    steps:
-    - task: ManualValidation@0
-      inputs:
-        notifyUsers: |
-          your.email@domain.com
-        instructions: |
-          Please review the build results and approve deployment to Dev.
-        onTimeout: 'reject'
-        timeoutInMinutes: 60
-      displayName: 'Manual approval before deployment'
-
-
-# =====================================================
-# DEV DEPLOYMENT
+# DEV DEPLOYMENT  
 # =====================================================
 - stage: 'Dev'
   displayName: 'Deploy to the Dev environment'
-  dependsOn: Approval
+  dependsOn: Build
   condition: succeeded()
   jobs:
   - deployment: Deploy
+    displayName: 'Deploy to Dev App Service'
     pool:
       name: hugotest1
-      vmImage: 'ubuntu-22.04'   # ✅ Microsoft-hosted Linux agent
-    environment: dev
+      vmImage: 'ubuntu-22.04'
+    environment: 'Dev'
     variables:
-      WebAppNameDev: 'tailspin-space-game-web-dev-254053414'   # ✅ Real dev web app
+      WebAppNameDev: 'tailspin-space-game-web-dev-254053414'  
     strategy:
       runOnce:
         deploy:
@@ -133,7 +111,7 @@ stages:
           - download: current
             artifact: drop
           - task: AzureWebApp@1
-            displayName: 'Azure App Service Deploy: dev website'
+            displayName: 'Azure App Service Deploy: Dev'
             inputs:
               azureSubscription: 'azure-sp-connection'
               appType: 'webAppLinux'
@@ -142,7 +120,7 @@ stages:
 
 
 # =====================================================
-# STAGING DEPLOYMENT
+# STAGING DEPLOYMENT  
 # =====================================================
 - stage: 'Staging'
   displayName: 'Deploy to the Staging environment'
@@ -150,12 +128,13 @@ stages:
   condition: succeeded()
   jobs:
   - deployment: Deploy
+    displayName: 'Deploy to Staging App Service'
     pool:
       name: hugotest1
-      vmImage: 'ubuntu-22.04'   # ✅ Microsoft-hosted Linux agent
-    environment: staging
+      vmImage: 'ubuntu-22.04'
+    environment: 'Staging'
     variables:
-      WebAppNameStaging: 'tailspin-space-game-web-staging-125860839'  # ✅ Real staging web app
+      WebAppNameStaging: 'tailspin-space-game-web-staging-125860839'  # ✅ Confirmed app name
     strategy:
       runOnce:
         deploy:
@@ -163,7 +142,7 @@ stages:
           - download: current
             artifact: drop
           - task: AzureWebApp@1
-            displayName: 'Azure App Service Deploy: staging website'
+            displayName: 'Azure App Service Deploy: Staging'
             inputs:
               azureSubscription: 'azure-sp-connection'
               appType: 'webAppLinux'

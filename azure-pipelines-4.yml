@@ -118,6 +118,7 @@ stages:
   jobs:
   - deployment: Deploy
     pool:
+      name: hugotest1
       vmImage: 'ubuntu-22.04'
     environment: dev
     variables:
